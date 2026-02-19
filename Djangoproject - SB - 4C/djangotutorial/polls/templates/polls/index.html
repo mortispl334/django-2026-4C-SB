@@ -1,0 +1,39 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power System Management</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{% static 'polls/style.css' %}">
+</head>
+<body>
+
+<header class="card">
+    <img src="{% static 'polls/images/dark_logo.png' %}" alt="Logo" class="logo">
+
+    <nav>
+        <a href="#" class="nav-btn">O nas</a>
+        <a href="#" class="nav-btn">Nowy wpis (generowanie)</a>
+        <a href="#" class="nav-btn">Nowy wpis (rozliczenie)</a>
+        <a href="#" class="nav-btn">Logowanie</a>
+    </nav>
+</header>
+
+<main>
+    <div class="card">
+        <p><strong class="head">W NexControl zajmujemy się:</strong></p>
+
+        <ul>
+            <li>Zarządzaniem systemami energetycznymi</li>
+            <li>Monitorowaniem zużycia energii</li>
+            <li>Optymalizacją kosztów energii</li>
+            <li>Analizą danych produkcji i konsumpcji</li>
+        </ul>
+    </div>
+</main>
+
+</body>
+</html>

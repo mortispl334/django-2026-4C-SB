@@ -4,36 +4,217 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Power System Management</title>
-
-    <!-- CSS -->
+    <meta name="author" content="Bielik">
+    <title>Chess Project - Bielik</title>
     <link rel="stylesheet" href="{% static 'polls/style.css' %}">
 </head>
 <body>
+    <aside class="page-navigation" id="aside">
+        <nav>
+            <div>
+                <a href="#" onclick="showPage('default-main')">Home</a>
+            </div>
+            <div class="user-nav">
+                {% if not user.is_authenticated %}
+                    <a href="#" onclick="showPage('formularz')">Zaloguj / Rejestracja</a>
+                {% else %}
+                    <span>Cześć, <strong>{{ user.username }}</strong>!</span>
+                    <a href="{% url 'polls:logout' %}" class="btn-logout-small">Wyloguj</a>
+                {% endif %}
+            </div>
+        </nav>
+    </aside>
 
-<header class="card">
-    <img src="{% static 'polls/images/dark_logo.png' %}" alt="Logo" class="logo">
+    <main id="main">
+        {% for question in questions %}
+            <h2>{{ question.question_text }}</h2>
 
-    <nav>
-        <a href="#" class="nav-btn">O nas</a>
-        <a href="#" class="nav-btn">Nowy wpis (generowanie)</a>
-        <a href="#" class="nav-btn">Nowy wpis (rozliczenie)</a>
-        <a href="#" class="nav-btn">Logowanie</a>
-    </nav>
-</header>
+            <form method="post" action="{% url 'polls:vote' question.id %}">
+                {% csrf_token %}
+                <ul>
+                {% for choice in question.choices.all %}
+                    <li>
+                        <label>
+                            <input type="radio" name="choice" value="{{ choice.id }}">
+                            {{ choice.choice_text }} ({{ choice.votes }})
+                        </label>
+                    </li>
+                {% endfor %}
+                </ul>
+                {% if user.is_authenticated %}
+                    <button type="submit">Głosuj</button>
+                {% else %}
+                    <p><em>Zaloguj się, aby zagłosować.</em></p>
+                {% endif %}
+            </form>
+        {% endfor %}
+        <div id="default-main" class="page active">
+            <section class="hero">
+                <h1>Witaj :D</h1>
+                {% if not user.is_authenticated %}
+                    <p>Zaloguj się, aby rozpocząć partię.</p>
+                    <button class="btn-main" onclick="showPage('formularz')">Przejdź do logowania</button>
+                {% else %}
+                    <p>Jesteś gotowy na partię?</p>
+                    <button class="btn-main" onclick="showPage('formularz')">Otwórz szachownicę</button>
+                {% endif %}
+            </section>
+        </div>
 
-<main>
-    <div class="card">
-        <p><strong class="head">W NexControl zajmujemy się:</strong></p>
+        <div id="formularz" class="page">
+            <section class="auth-box">
+                {% if not user.is_authenticated %}
+                    <div id="login-split" class="login-split auth-active">
+                        <fieldset>
+                            <legend>Logowanie</legend>
+                            <form method="post" action="{% url 'polls:login' %}">
+                                {% csrf_token %}
+                                <input type="text" name="username" placeholder="Użytkownik" required>
+                                <input type="password" name="password" placeholder="Hasło" required>
+                                <button type="submit" class="btn-log">Zaloguj</button>
+                            </form>
+                            <a href="#" onclick="switchAuth('register'); return false;">Zarejestruj się</a>
+                        </fieldset>
+                    </div>
+                    <div id="register-split" class="register-split">
+                        <fieldset>
+                            <legend>Rejestracja</legend>
+                            <form method="post" action="{% url 'polls:register' %}">
+                                {% csrf_token %}
+                                <input type="text" name="username" placeholder="Użytkownik" required>
+                                <input type="password" name="password" placeholder="Hasło" required>
+                                <button type="submit" class="btn-log">Zarejestruj się</button>
+                            </form>
+                            <a href="#" onclick="switchAuth('login'); return false;">Zaloguj się</a>
+                        </fieldset>
+                    </div>
+                {% else %}
+                    <div class="game-header">
+                        <span>Zalogowany jako: <strong>{{ user.username }}</strong></span>
+                    </div>
 
-        <ul>
-            <li>Zarządzaniem systemami energetycznymi</li>
-            <li>Monitorowaniem zużycia energii</li>
-            <li>Optymalizacją kosztów energii</li>
-            <li>Analizą danych produkcji i konsumpcji</li>
-        </ul>
-    </div>
-</main>
+                    <section id="chess-arena">
+                        <div id="eval-container">
+                            <div id="eval-black"></div>
+                            <div id="eval-white"></div>
+                        </div>
 
+                        <div class="board-container">
+                            <div id="turnInfo" class="status-box">TURA: BIAŁE</div>
+                            
+                            <div style="position: relative; width: fit-content; margin: 0 auto;">
+                                <div class="chessboard" id="board"></div>
+                                <canvas id="arrowCanvas" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 100;"></canvas>
+                            </div>
+
+                            <div class="player-badge">Gracz: <strong>{{ user.username }}</strong></div>
+                        </div>
+
+                        <div id="ui-panel">
+                            <button id="resetBtn" class="btn-chess full-width">Nowa Gra</button>
+                            <div class="flex-gap">
+                                <button id="hintBtn" class="btn-chess flex-1">Podpowiedź</button>
+                                <button id="analysisBtn" class="btn-chess flex-1">Heatmapa</button>
+                            </div>
+                            <div class="flex-gap">
+                                <button id="flipBtn" class="btn-chess flex-1">Obróć</button>
+                                <button id="pgnBtn" class="btn-chess flex-1">PGN</button>
+                            </div>
+                            
+                            <div id="history-panel">
+                                <div class="history-title">Historia ruchów</div>
+                                <div id="history-list"></div> 
+                            </div>
+                        </div>
+                    </section>
+
+                    <div id="promo-modal" class="modal" style="display: none;">
+                        <div class="modal-content">
+                            <h3>Wybierz figurę</h3>
+                            <div id="promo-pieces"></div>
+                        </div>
+                    </div>
+
+                    <div id="game-alert" class="modal" style="display: none;">
+                        <div class="modal-content">
+                            <h3 id="alert-title">Koniec gry</h3>
+                            <p id="alert-body"></p>
+                            <button onclick="document.getElementById('game-alert').style.display='none'" class="btn-alert-close">Zamknij</button>
+                        </div>
+                    </div>
+
+                    {% if user.is_superuser %}
+                    <div class="admin-section">
+                        <h3>Zarządzanie użytkownikami</h3>
+                        <div class="admin-table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Użytkownik</th>
+                                        <th>Akcja</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for u in users %}
+                                    <tr>
+                                        <td>{{ u.username }}</td>
+                                        <td>
+                                            {% if u.id != user.id %}
+                                            <form method="post" action="{% url 'polls:delete_user' %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="target" value="{{ u.id }}">
+                                                <button type="submit" class="btn-delete">Usuń</button>
+                                            </form>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endif %}
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <p>Copyright © 2026 Powered by Bielik</p>
+    </footer>
+
+    <script>
+        function showPage(pageId) {
+            const allPages = document.querySelectorAll('.page');
+            allPages.forEach(p => p.classList.remove('active'));
+            const target = document.getElementById(pageId);
+            if (target) target.classList.add('active');
+        }
+
+        {% if user.is_authenticated %}
+            showPage('formularz');
+        {% endif %}
+    </script>
+
+    {% if user.is_authenticated %}
+        <script src="{% static 'js/chess.js' %}"></script>
+    {% endif %}
+
+    <script>
+        function switchAuth(type){
+
+            const login = document.getElementById("login-split");
+            const register = document.getElementById("register-split");
+
+            login.classList.remove("auth-active");
+            register.classList.remove("auth-active");
+
+            if(type === "login"){
+                login.classList.add("auth-active");
+            } else {
+                register.classList.add("auth-active");
+            }
+        }
+        </script>
 </body>
 </html>
